@@ -35,11 +35,11 @@ Usage:  stock [OPTIONS] DESIGNATOR
 stock NVDA:NASDAQ
 
 # Monitor Nvidia on NASDAQ within the USD 100..200 range
-stock NVDA:NASDAQ -b 100 -t 200
+stock -b 100 -t 200 NVDA:NASDAQ
 
-# Monitor Siam Cement on BKK exchange with a USD 200 Top
-stock SCC:BKK -t 200
+# Monitor Siam Cement on BKK exchange with a USD 100 Bottom
+stock - 100 SCC:BKK
 
-# Monitor BTC-USD exchange rate (price of BTC in USD)
-stock BTC-USD
+# Monitor BTC-USD exchange rate (price of BTC in USD) with a USD 110000 Top
+stock -t 110000 BTC-USD
 ```
