@@ -38,7 +38,7 @@ stock NVDA:NASDAQ
 stock -b 100 -t 200 NVDA:NASDAQ
 
 # Monitor Siam Cement on BKK exchange with a USD 100 Bottom
-stock - 100 SCC:BKK
+stock -b 100 SCC:BKK
 
 # Monitor BTC-USD exchange rate (price of BTC in USD) with a USD 110000 Top
 stock -t 110000 BTC-USD
