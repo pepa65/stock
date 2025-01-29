@@ -17,15 +17,15 @@ import (
 	"time"
 )
 
-const version = "0.1.1"
+const version = "0.2.0"
 
-var usage = "stock v" + version + ` - Monitor stock by scraping Google Finance
-Usage: stock [options]
-    -s <Stock symbol>       Stock symbol (case insensitive, default: NVDA)
-    -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
-    -b <amount>             Bottom price monitored in USD
-    -t <amount>             Top price monitored in USD
-    -h                      Show this help text
+var usage = "stock v" + version + ` - Monitor exchange rate by scraping Google Finance
+Usage:  stock [OPTIONS] DESIGNATOR
+  OPTIONS:
+    -b <Bottom>    Bottom price monitored in USD (optional)
+    -t <Top>       Top price monitored in USD (optional)
+    -h             Show this help text (exclusive)
+  DESIGNATOR:      STOCK:EXCHANGE (stock) or CUR-CUR (exchange rate)
 ` // end usage
 
 func man(mess string) {
@@ -38,28 +38,49 @@ func man(mess string) {
 }
 
 func main() {
-	var help bool
-	var stock string
-	var exchange string
 	var min float64
 	var max float64
-	flag.BoolVar(&help, "h", false, "Show help text")
-	flag.StringVar(&stock, "s", "NVDA", "Stock symbol")
-	flag.StringVar(&exchange, "e", "NASDAQ", "Exchange symbol")
+	var help bool
+	designator := "NVDA:NASDAQ"
 	flag.Float64Var(&min, "b", 0, "Bottom price monitored")
 	flag.Float64Var(&max, "t", math.MaxFloat64, "Top price monitored")
+	flag.BoolVar(&help, "h", false, "Show help text")
 	flag.Parse()
 	if help {
 		man("")
+	}
+
+	rest := flag.Args()
+	if len(rest) > 1 {
+		for _, r := range rest {
+			if r[0] == '-' {
+				man("all flags (start with '-') should come before the designator")
+			}
+		}
+		man(fmt.Sprintf("only 1 designator allowed: %s", rest))
+	}
+
+	if len(rest) == 1 {
+		designator = rest[0]
+	}
+
+	curr := "USD"
+	currs := strings.Split(designator, "-")
+	if len(currs) == 2 {
+		curr = currs[1]
+	} else if len(currs) == 1 {
+		currs = strings.Split(designator, ":")
+		if len(currs) != 2 {
+			man("give designator as STOCK:EXCHANGE or as CUR-CUR")
+		}
 	}
 
 	if min > max {
 		man(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max))
 	}
 
-	exchange = strings.ToUpper(exchange)
-	stock = strings.ToUpper(stock)
-	url := fmt.Sprintf("https://www.google.com/finance/quote/%s:%s", stock, exchange)
+	designator = strings.ToUpper(designator)
+	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
 	errorAlert := exec.Command("notify-send", "'stock' has exited, restart to continue monitoring")
 	var priceregex = regexp.MustCompile(`data-last-price="[^"]*`)
 
@@ -74,14 +95,14 @@ func main() {
 		data, _ := ioutil.ReadAll(res.Body)
 		if len(data) == 0 {
 			errorAlert.Run()
-			man(fmt.Sprintf("invalid Exchange symbol (%s) or Stock symbol (%s)", exchange, stock))
+			man(fmt.Sprintf("invalid designator %s", designator))
 		}
 
 		// data-last-price="PRICE"
 		price := strings.Split(string(priceregex.Find(data)), `"`)
 		if len(price) < 2 {
 			errorAlert.Run()
-			man(fmt.Sprintf("Stock %s not found in exchange %s", stock, exchange))
+			man(fmt.Sprintf("designator %s not found", designator))
 		}
 
 		val, err := strconv.ParseFloat(price[1], 64)
@@ -91,7 +112,7 @@ func main() {
 		}
 
 		now := time.Now()
-		fmt.Printf("%s  %s:%s  USD %f\n", now.Format("2006-01-02 15:04:05"), stock, exchange, val)
+		fmt.Printf("%s  %s  %s %f\n", now.Format("2006-01-02_15:04:05"), designator, curr, val)
 		if val < min || val > max {
 			var title string
 			if val < min {
@@ -99,7 +120,7 @@ func main() {
 			} else {
 				title = fmt.Sprintf("Price over Top (%.2f)", max)
 			}
-			message := fmt.Sprintf("%s\n%s:%s is now USD %.2f\n", title, stock, exchange, val)
+			message := fmt.Sprintf("%s\n%s is now %s %.2f\n", title, designator, curr, val)
 			alert := exec.Command("notify-send", message)
 			alert.Run()
 			fmt.Printf(message)

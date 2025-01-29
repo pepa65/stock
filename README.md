@@ -3,16 +3,16 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock v0.1.1
-**Monitor stock by scraping Google Finance**
+# stock v0.2.0
+**Monitor exchange rate by scraping Google Finance**
 
-Follows a single stock on a specified exchange, monitors a bottom & top price and
-alerts (on Linux with notify-send) when the stock price goes outside of the range.
-The Google Finance page for the stock + exchange is scraped
-(where some stocks are real-time, but some stocks can have a 15 minute delay!).
+Follows a single stock on a specified exchange or a currency exchange rate.
+Optionally monitors a bottom & top price and then alerts
+(on Linux with notify-send) when the price goes outside of the range.
+The Google Finance page for the stock or the exchange rate is scraped.
 
 * Repo: <https://github.com/pepa65/stock>
-* Requires: libnotify-bin(notify-send)
+* Requires: libnotify-bin(notify-send)[for alerts]
 
 ## Install
 ### With golang installed
@@ -20,24 +20,26 @@ The Google Finance page for the stock + exchange is scraped
 
 ## Usage
 ```
-stock v0.1.1 - Monitor stock by scraping Google Finance
-Usage: stock [options]
-    -s <Stock symbol>       Stock symbol (case insensitive, default: NVDA)
-    -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
-    -b <amount>             Bottom price monitored in USD
-    -t <amount>             Top price monitored in USD
-    -h                      Show this help text
-
+stock v0.2.0 - Monitor exchange rate by scraping Google Finance
+Usage:  stock [OPTIONS] DESIGNATOR
+  OPTIONS:
+    -b <Bottom>    Bottom price monitored in USD (optional)
+    -t <Top>       Top price monitored in USD (optional)
+    -h             Show this help text (exclusive)
+  DESIGNATOR:      STOCK:EXCHANGE (stock) or CUR-CUR (exchange rate)
 ```
 
 ### Examples
 ```
-# This monitors Nvidia on NASDAQ exchange
-stock
+# Monitor Nvidia on NASDAQ exchange
+stock NVDA:NASDAQ
 
-# This monitors Nvidia on NASDAQ exchange within the USD 100..200 range
-stock -b 100 -t 200
+# Monitor Nvidia on NASDAQ within the USD 100..200 range
+stock NVDA:NASDAQ -b 100 -t 200
 
-# This monitors Siam Cement on BKK exchange
-stock -s SCC -e BKK
+# Monitor Siam Cement on BKK exchange with a USD 200 Top
+stock SCC:BKK -t 200
+
+# Monitor BTC-USD exchange rate (price of BTC in USD)
+stock BTC-USD
 ```
