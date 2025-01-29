@@ -16,12 +16,14 @@ import (
 	"time"
 )
 
-var usage = `stock - Monitor stock by scraping Google Finance
+const version = "0.1.0"
+
+var usage = "stock " + version + ` - Monitor stock by scraping Google Finance
 Usage: stock [options]
-    -s <stock symbol>       Stock symbol (case insensitive, default: NVDA)
-    -e <exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
-    -b <number>             Bottom price monitored
-    -t <number>             Top price monitored
+    -s <Stock symbol>       Stock symbol (case insensitive, default: NVDA)
+    -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
+    -b <amount>             Bottom price monitored in USD
+    -t <amount>             Top price monitored in USD
 ` // end usage
 
 func man(mess string) {
@@ -88,21 +90,21 @@ func main() {
 			man(fmt.Sprintf("cannot convert %s to float", price))
 		}
 
+		now := time.Now()
+		fmt.Printf("%s  %s:%s  USD %f\n", now.Format("2006-01-02 15:04:05"), stock, exchange, val)
 		if val < min || val > max {
 			var title string
 			if val < min {
-				title = "Price under Bottom alert"
+				title = fmt.Sprintf("Price under Bottom (%.2f)", min)
 			} else {
-				title = "Price over Top alert"
+				title = fmt.Sprintf("Price over Top (%.2f)", max)
 			}
-			message := fmt.Sprintf("%s\n%s:%s is now $%.2f\n", title, stock, exchange, val)
+			message := fmt.Sprintf("%s\n%s:%s is now USD %.2f\n", title, stock, exchange, val)
 			alert := exec.Command("notify-send", message)
-			fmt.Printf(message)
 			alert.Run()
+			fmt.Printf(message)
 		}
 
-		now := time.Now()
-		fmt.Printf("%s  %s:%s  %f\n", now.Format("2006-01-02 15:04:05"), stock, exchange, val)
 		// 180s + 0..30s
 		time.Sleep(time.Duration((180000 + rand.Intn(30000))) * time.Millisecond)
 	}
