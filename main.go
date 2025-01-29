@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -16,7 +17,7 @@ import (
 	"time"
 )
 
-const version = "0.1.0"
+const version = "0.1.1"
 
 var usage = "stock " + version + ` - Monitor stock by scraping Google Finance
 Usage: stock [options]
@@ -24,6 +25,7 @@ Usage: stock [options]
     -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
     -b <amount>             Bottom price monitored in USD
     -t <amount>             Top price monitored in USD
+    -h                      Show this help text
 ` // end usage
 
 func man(mess string) {
@@ -36,21 +38,19 @@ func man(mess string) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		man("")
-	}
-
+	var help bool
 	var stock string
 	var exchange string
 	var min float64
 	var max float64
+	flag.BoolVar(&help, "h", false, "Show help text")
 	flag.StringVar(&stock, "s", "NVDA", "Stock symbol")
 	flag.StringVar(&exchange, "e", "NASDAQ", "Exchange symbol")
-	flag.Float64Var(&min, "b", -0.1, "Bottom price monitored")
-	flag.Float64Var(&max, "t", -0.1, "Top price monitored")
+	flag.Float64Var(&min, "b", 0, "Bottom price monitored")
+	flag.Float64Var(&max, "t", math.MaxFloat64, "Top price monitored")
 	flag.Parse()
-	if stock == "" || exchange == "" || min == -0.1 || max == -0.1 {
-		man("all arguments are mandatory")
+	if help {
+		man("")
 	}
 
 	if min > max {
