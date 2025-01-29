@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock 0.1.1
+# stock v0.1.1
 **Monitor stock by scraping Google Finance**
 
 Follows a single stock on a specified exchange, monitors a bottom & top price and
@@ -20,7 +20,7 @@ The Google Finance page for the stock + exchange is scraped
 
 ## Usage
 ```
-stock 0.1.1 - Monitor stock by scraping Google Finance
+stock v0.1.1 - Monitor stock by scraping Google Finance
 Usage: stock [options]
     -s <Stock symbol>       Stock symbol (case insensitive, default: NVDA)
     -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)

@@ -19,7 +19,7 @@ import (
 
 const version = "0.1.1"
 
-var usage = "stock " + version + ` - Monitor stock by scraping Google Finance
+var usage = "stock v" + version + ` - Monitor stock by scraping Google Finance
 Usage: stock [options]
     -s <Stock symbol>       Stock symbol (case insensitive, default: NVDA)
     -e <Exchange symbol>    Exchange symbol (case insensitive, default: NASDAQ)
