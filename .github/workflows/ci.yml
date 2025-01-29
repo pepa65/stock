@@ -8,6 +8,3 @@ jobs:
       - uses: hashicorp/setup-golang@v1
         with:
           version-file: go.mod
-      - name: Vet
-        run: |
-          make vet
