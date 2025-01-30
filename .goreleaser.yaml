@@ -1,5 +1,6 @@
 upx:
   - enabled: true
+    lzma: true
     compress: best
     goos: [linux]
 
