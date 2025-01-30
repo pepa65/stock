@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const version = "0.2.1"
+const version = "0.2.2"
 
 var usage = "stock v" + version + ` - Monitor exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
