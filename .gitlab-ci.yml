@@ -1,0 +1,14 @@
+image: golang:latest
+
+stages:
+  - build
+
+building:
+  stage: build
+  script:
+    - go get -u github.com/pepa65/stock
+    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
+  artifacts:
+    name: stock
+    paths:
+      - stock

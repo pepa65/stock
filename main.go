@@ -11,13 +11,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const version = "0.2.0"
+const version = "0.2.1"
 
 var usage = "stock v" + version + ` - Monitor exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
@@ -82,7 +81,6 @@ func main() {
 	designator = strings.ToUpper(designator)
 	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
 	errorAlert := exec.Command("notify-send", "'stock' has exited, restart to continue monitoring")
-	var priceregex = regexp.MustCompile(`data-last-price="[^"]*`)
 
 	for {
 		res, err := http.Get(url)
@@ -99,13 +97,19 @@ func main() {
 		}
 
 		// data-last-price="PRICE"
-		price := strings.Split(string(priceregex.Find(data)), `"`)
+		start := strings.Split(string(data), `data-last-price="`)
+		if len(start) < 2 {
+			errorAlert.Run()
+			man(fmt.Sprintf("designator %s not found", designator))
+		}
+
+		price := strings.Split(start[1], `"`)
 		if len(price) < 2 {
 			errorAlert.Run()
 			man(fmt.Sprintf("designator %s not found", designator))
 		}
 
-		val, err := strconv.ParseFloat(price[1], 64)
+		val, err := strconv.ParseFloat(price[0], 64)
 		if err != nil {
 			errorAlert.Run()
 			man(fmt.Sprintf("cannot convert %s to float", price))

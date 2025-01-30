@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock v0.2.0
+# stock v0.2.1
 **Monitor exchange rate by scraping Google Finance**
 
 Follows a single stock on a specified exchange or a currency exchange rate.
@@ -15,12 +15,27 @@ The Google Finance page for the stock or the exchange rate is scraped.
 * Requires: libnotify-bin(notify-send)[for alerts]
 
 ## Install
+### Download
+```
+sudo wget -O /usr/local/bin/stock 4e4.in/stock
+sudo chmod +x /usr/local/bin/stock
+```
+
 ### With golang installed
 `go install github.com/pepa65/stock@latest`
 
+### With golang from github repo
+```
+git clone https://github.com/pepa65/stock
+cd stock
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o stock
+sudo cp stock /usr/local/bin/
+sudo chown root:root /usr/local/bin/stock
+```
+
 ## Usage
 ```
-stock v0.2.0 - Monitor exchange rate by scraping Google Finance
+stock v0.2.1 - Monitor exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
     -b <Bottom>    Bottom price monitored in USD (optional)
