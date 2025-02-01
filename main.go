@@ -16,18 +16,23 @@ import (
 	"time"
 )
 
-const version = "0.2.2"
+const version = "0.3.0"
+const stock = "NVDA:NASDAQ"
+const baseintv = 300 // seconds
+const randintv = 60 // seconds
 
-var usage = "stock v" + version + ` - Monitor exchange rate by scraping Google Finance
+var usage = "stock v" + version + fmt.Sprintf(` - Monitor exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
-    -b <Bottom>    Bottom price monitored in USD (optional)
-    -t <Top>       Top price monitored in USD (optional)
-    -h             Show this help text (exclusive)
-  DESIGNATOR:      STOCK:EXCHANGE (stock) or CUR-CUR (exchange rate)
-` // end usage
+    -b <Price>    Bottom price monitored in USD (optional)
+    -t <Price>    Top price monitored in USD (optional)
+    -i <Seconds>  Check interval (plus random add) [default: %d]
+    -r <Seconds>  Max.random add to check interval [default: %d]
+    -h            Show this help text (exclusive)
+  DESIGNATOR:  STOCK:EXCH (stock) or CUR-CUR (exch.rate) [default: %s]
+`, baseintv, randintv, stock)
 
-func man(mess string) {
+func helpexit(mess string) {
 	fmt.Printf("%s", usage)
 	if len(mess) > 0 {
 		fmt.Printf("\nERROR: %s\n", mess)
@@ -39,24 +44,28 @@ func man(mess string) {
 func main() {
 	var min float64
 	var max float64
+	var intv int
+	var mrand int
 	var help bool
-	designator := "NVDA:NASDAQ"
+	designator := stock
 	flag.Float64Var(&min, "b", 0, "Bottom price monitored")
 	flag.Float64Var(&max, "t", math.MaxFloat64, "Top price monitored")
+	flag.IntVar(&intv, "i", baseintv, "Check interval in seconds (plus random add)")
+	flag.IntVar(&mrand, "r", randintv, "Max.random add to check interval in seconds")
 	flag.BoolVar(&help, "h", false, "Show help text")
 	flag.Parse()
 	if help {
-		man("")
+		helpexit("")
 	}
 
 	rest := flag.Args()
 	if len(rest) > 1 {
 		for _, r := range rest {
 			if r[0] == '-' {
-				man("all flags (start with '-') should come before the designator")
+				helpexit("all flags (start with '-') should come before the designator")
 			}
 		}
-		man(fmt.Sprintf("only 1 designator allowed: %s", rest))
+		helpexit(fmt.Sprintf("only 1 designator allowed: %s", rest))
 	}
 
 	if len(rest) == 1 {
@@ -70,49 +79,49 @@ func main() {
 	} else if len(currs) == 1 {
 		currs = strings.Split(designator, ":")
 		if len(currs) != 2 {
-			man("give designator as STOCK:EXCHANGE or as CUR-CUR")
+			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR")
 		}
 	}
 
 	if min > max {
-		man(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max))
+		helpexit(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max))
 	}
 
 	designator = strings.ToUpper(designator)
 	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
-	errorAlert := exec.Command("notify-send", "'stock' has exited, restart to continue monitoring")
+	errorAlert := exec.Command("notify-send", "-w", "-t", "600000", "'stock' has exited, restart to continue monitoring")
 
 	for {
 		res, err := http.Get(url)
 		if err != nil {
 			errorAlert.Run()
-			man("failure to read URL")
+			helpexit("failure to read URL")
 		}
 
 		defer res.Body.Close()
 		data, _ := ioutil.ReadAll(res.Body)
 		if len(data) == 0 {
 			errorAlert.Run()
-			man(fmt.Sprintf("invalid designator %s", designator))
+			helpexit(fmt.Sprintf("invalid designator %s", designator))
 		}
 
 		// data-last-price="PRICE"
 		start := strings.Split(string(data), `data-last-price="`)
 		if len(start) < 2 {
 			errorAlert.Run()
-			man(fmt.Sprintf("designator %s not found", designator))
+			helpexit(fmt.Sprintf("designator %s not found", designator))
 		}
 
 		price := strings.Split(start[1], `"`)
 		if len(price) < 2 {
 			errorAlert.Run()
-			man(fmt.Sprintf("designator %s not found", designator))
+			helpexit(fmt.Sprintf("designator %s not found", designator))
 		}
 
 		val, err := strconv.ParseFloat(price[0], 64)
 		if err != nil {
 			errorAlert.Run()
-			man(fmt.Sprintf("cannot convert %s to float", price))
+			helpexit(fmt.Sprintf("cannot convert %s to float", price))
 		}
 
 		now := time.Now()
@@ -125,12 +134,10 @@ func main() {
 				title = fmt.Sprintf("Price over Top (%.2f)", max)
 			}
 			message := fmt.Sprintf("%s\n%s is now %s %.2f\n", title, designator, curr, val)
-			alert := exec.Command("notify-send", message)
+			alert := exec.Command("notify-send", "-w", "-t", "600000", message)
 			alert.Run()
 			fmt.Printf(message)
 		}
-
-		// 180s + 0..30s
-		time.Sleep(time.Duration((180000 + rand.Intn(30000))) * time.Millisecond)
+		time.Sleep(time.Duration((intv * 1000 + rand.Intn(mrand * 1000))) * time.Millisecond)
 	}
 }
