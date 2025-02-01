@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const version = "0.3.1"
+const version = "0.4.0"
 const stock = "NVDA:NASDAQ"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -37,6 +37,9 @@ func helpexit(mess string) {
 	fmt.Printf("%s", usage)
 	if len(mess) > 0 {
 		fmt.Printf("\nERROR: %s\n", mess)
+		errorAlert := exec.Command("notify-send", "-w", "-t", "600000",
+			fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
+		errorAlert.Start()
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -90,38 +93,32 @@ func main() {
 
 	designator = strings.ToUpper(designator)
 	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
-	errorAlert := exec.Command("notify-send", "-w", "-t", "600000", "'stock' has exited, restart to continue monitoring")
 
 	for {
 		res, err := http.Get(url)
 		if err != nil {
-			errorAlert.Run()
 			helpexit("failure to read URL")
 		}
 
 		defer res.Body.Close()
 		data, _ := ioutil.ReadAll(res.Body)
 		if len(data) == 0 {
-			errorAlert.Run()
 			helpexit(fmt.Sprintf("invalid designator %s", designator))
 		}
 
 		// data-last-price="PRICE"
 		start := strings.Split(string(data), `data-last-price="`)
 		if len(start) < 2 {
-			errorAlert.Run()
 			helpexit(fmt.Sprintf("designator %s not found", designator))
 		}
 
 		price := strings.Split(start[1], `"`)
 		if len(price) < 2 {
-			errorAlert.Run()
 			helpexit(fmt.Sprintf("designator %s not found", designator))
 		}
 
 		val, err := strconv.ParseFloat(price[0], 64)
 		if err != nil {
-			errorAlert.Run()
 			helpexit(fmt.Sprintf("cannot convert %s to float", price))
 		}
 
@@ -136,7 +133,7 @@ func main() {
 			}
 			message := fmt.Sprintf("%s\n%s is now %s %.2f\n", title, designator, curr, val)
 			alert := exec.Command("notify-send", "-w", "-t", "600000", message)
-			alert.Run()
+			alert.Start()
 			fmt.Printf(message)
 		}
 		time.Sleep(time.Duration((intv * 1000 + rand.Intn(mrand * 1000))) * time.Millisecond)
