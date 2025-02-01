@@ -16,12 +16,13 @@ import (
 	"time"
 )
 
-const version = "0.3.0"
+const version = "0.3.1"
 const stock = "NVDA:NASDAQ"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
 
-var usage = "stock v" + version + fmt.Sprintf(` - Monitor exchange rate by scraping Google Finance
+var usage = "stock v" + version +
+	fmt.Sprintf(` - Monitor stock or exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
     -b <Price>    Bottom price monitored in USD (optional)

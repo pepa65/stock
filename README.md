@@ -3,8 +3,8 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock v0.3.0
-**Monitor exchange rate by scraping Google Finance**
+# stock v0.3.1
+**Monitor stock or exchange rate by scraping Google Finance**
 
 Follows a single stock on a specified exchange or a currency exchange rate.
 Optionally monitors a bottom & top price and then alerts
@@ -35,7 +35,7 @@ sudo chown root:root /usr/local/bin/stock
 
 ## Usage
 ```
-stock v0.3.0 - Monitor exchange rate by scraping Google Finance
+stock v0.3.1 - Monitor stock or exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
     -b <Price>    Bottom price monitored in USD (optional)
