@@ -8,8 +8,6 @@ archives:
 - format: binary
 
 builds:
-  - id: "stock"
-    binary: "stock"
   - env:
       - CGO_ENABLED=0
     goos:
