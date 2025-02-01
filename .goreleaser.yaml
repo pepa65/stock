@@ -8,12 +8,21 @@ archives:
 - format: binary
 
 builds:
+  - id: "stock"
+    binary: "stock"
   - env:
       - CGO_ENABLED=0
     goos:
       - linux
     goarch:
       - amd64
+    ldflags:
+      - -s -w
+
+release:
+  gitlab:
+    owner: gitlab-com/pepa65
+    name: stock
 
 checksum:
   name_template: 'checksums.txt'
@@ -27,3 +36,7 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+gitlab_urls:
+  api: '{{ .Env.CI_SERVER_URL }}'
+  download: '{{ .Env.CI_SERVER_URL }}'

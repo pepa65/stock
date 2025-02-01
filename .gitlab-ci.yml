@@ -8,6 +8,8 @@ building:
   script:
     - go get -u github.com/pepa65/stock
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
+    - apt-get update && apt-get install -y upx-ucl
+    - upx-ucl --brute stock
   artifacts:
     name: stock
     paths:
