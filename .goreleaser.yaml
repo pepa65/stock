@@ -12,6 +12,10 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
+      - dragonfly
+      - freebsd
+      - netbsd
+      - openbsd
     goarch:
       - amd64
 

@@ -3,7 +3,7 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock v0.4.0
+# stock v0.5.0
 **Monitor stock or exchange rate by scraping Google Finance**
 
 Follows a single stock on a specified exchange or a currency exchange rate.
@@ -35,13 +35,14 @@ sudo chown root:root /usr/local/bin/stock
 
 ## Usage
 ```
-stock v0.4.0 - Monitor stock or exchange rate by scraping Google Finance
+stock v0.5.0 - Monitor stock or exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
     -b <Price>    Bottom price monitored in USD (optional)
     -t <Price>    Top price monitored in USD (optional)
     -i <Seconds>  Check interval (plus random add) [default: 300]
     -r <Seconds>  Max.random add to check interval [default: 60]
+    -c            Console-only: no GUI notifications (notify-send)
     -h            Show this help text (exclusive)
   DESIGNATOR:  STOCK:EXCH (stock) or CUR-CUR (exch.rate) [default: NVDA:NASDAQ]
 ```

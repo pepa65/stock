@@ -8,7 +8,15 @@ building:
   script:
     - go get -u github.com/pepa65/stock
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
+    - CGO_ENABLED=0 GOOS=dragonfly GOARCH=amd64 go build -ldflags="-s -w" -o stock_dragonfly
+    - CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 go build -ldflags="-s -w" -o stock_freebsd
+    - CGO_ENABLED=0 GOOS=netbsd GOARCH=amd64 go build -ldflags="-s -w" -o stock_netbsd
+    - CGO_ENABLED=0 GOOS=openbsd GOARCH=amd64 go build -ldflags="-s -w" -o stock_openbsd
   artifacts:
     name: stock
     paths:
       - stock
+      - stock_dragonfly
+      - stock_freebsd
+      - stock_netbsd
+      - stock_openbsd
