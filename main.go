@@ -3,6 +3,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,12 +12,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
-const version = "0.5.0"
+const version = "0.6.0"
 const stock = "NVDA:NASDAQ"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -33,17 +36,23 @@ Usage:  stock [OPTIONS] DESIGNATOR
     -h            Show this help text (exclusive)
   DESIGNATOR:  STOCK:EXCH (stock) or CUR-CUR (exch.rate) [default: %s]
 `, baseintv, randintv, stock)
+//go:embed stock.png
+var icon []byte
+var iconpath string
 
-func helpexit(mess string, console bool) {
-	fmt.Printf("%s", usage)
+func helpexit(mess string, help bool, console bool) {
+	if help {
+		fmt.Printf("%s", usage)
+	}
+	if !console {
+		errorAlert := exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath,
+			fmt.Sprintf("ERROR alert '%s'", os.Args[0]),
+			fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
+		errorAlert.Start()
+		os.Remove(iconpath)
+	}
 	if len(mess) > 0 {
 		fmt.Printf("\nERROR: %s\n", mess)
-		if !console {
-			errorAlert := exec.Command("notify-send", "-w", "-t", "600000",
-				fmt.Sprintf("ERROR alert '%s'", os.Args[0]),
-				fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
-			errorAlert.Start()
-		}
 		os.Exit(1)
 	}
 	os.Exit(0)
@@ -65,17 +74,41 @@ func main() {
 	flag.BoolVar(&help, "h", false, "Show help text")
 	flag.Parse()
 	if help {
-		helpexit("", true)
+		helpexit("", true, true)
+	}
+
+	// Catch interrupts
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for range sig {
+			helpexit("", false, console)
+		}
+	}()
+
+	if !console {
+		path, e := exec.Command("mktemp", "/tmp/stock_XXXXXXXX.png").Output()
+		if e != nil {
+			fmt.Println(e)
+			os.Exit(2)
+		}
+
+		iconpath = string(path[:len(path)-1])
+		e = ioutil.WriteFile(iconpath, icon, 0644)
+		if e != nil {
+			fmt.Println(e)
+			os.Exit(3)
+		}
 	}
 
 	rest := flag.Args()
 	if len(rest) > 1 {
 		for _, r := range rest {
 			if r[0] == '-' {
-				helpexit("all flags (start with '-') should come before the designator", console)
+				helpexit("all flags (start with '-') should come before the designator", true, console)
 			}
 		}
-		helpexit(fmt.Sprintf("only 1 designator allowed: %s", rest), console)
+		helpexit(fmt.Sprintf("only 1 designator allowed: %s", rest), true, console)
 	}
 
 	if len(rest) == 1 {
@@ -89,12 +122,12 @@ func main() {
 	} else if len(currs) == 1 {
 		currs = strings.Split(designator, ":")
 		if len(currs) != 2 {
-			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", console)
+			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", true, console)
 		}
 	}
 
 	if min > max {
-		helpexit(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max), console)
+		helpexit(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max), true, console)
 	}
 
 	designator = strings.ToUpper(designator)
@@ -103,29 +136,29 @@ func main() {
 	for {
 		res, err := http.Get(url)
 		if err != nil {
-			helpexit("failure to read URL", console)
+			helpexit("failure to read URL", false, console)
 		}
 
 		defer res.Body.Close()
 		data, _ := ioutil.ReadAll(res.Body)
 		if len(data) == 0 {
-			helpexit(fmt.Sprintf("invalid designator %s", designator), console)
+			helpexit(fmt.Sprintf("invalid designator %s", designator), true, console)
 		}
 
 		// data-last-price="PRICE"
 		start := strings.Split(string(data), `data-last-price="`)
 		if len(start) < 2 {
-			helpexit(fmt.Sprintf("designator %s not found", designator), console)
+			helpexit(fmt.Sprintf("designator %s not found", designator), true, console)
 		}
 
 		price := strings.Split(start[1], `"`)
 		if len(price) < 2 {
-			helpexit(fmt.Sprintf("designator %s not found", designator), console)
+			helpexit(fmt.Sprintf("designator %s not found", designator), true, console)
 		}
 
 		val, err := strconv.ParseFloat(price[0], 64)
 		if err != nil {
-			helpexit(fmt.Sprintf("cannot convert %s to float", price), console)
+			helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console)
 		}
 
 		now := time.Now()
@@ -140,7 +173,7 @@ func main() {
 					msg = fmt.Sprintf("Price over Top (%.2f)", max)
 				}
 				message := fmt.Sprintf("%s\n%s is now %s %.2f\n", msg, designator, curr, val)
-				alert := exec.Command("notify-send", "-w", "-t", "600000", title, message)
+				alert := exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath, title, message)
 				alert.Start()
 			}
 		}
