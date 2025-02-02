@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const version = "0.6.0"
+const version = "0.6.1"
 const stock = "NVDA:NASDAQ"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -49,6 +49,7 @@ func helpexit(mess string, help bool, console bool) {
 			fmt.Sprintf("ERROR alert '%s'", os.Args[0]),
 			fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
 		errorAlert.Start()
+		time.Sleep(time.Duration(time.Second))
 		os.Remove(iconpath)
 	}
 	if len(mess) > 0 {
@@ -77,15 +78,7 @@ func main() {
 		helpexit("", true, true)
 	}
 
-	// Catch interrupts
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		for range sig {
-			helpexit("", false, console)
-		}
-	}()
-
+	// Prep icon
 	if !console {
 		path, e := exec.Command("mktemp", "/tmp/stock_XXXXXXXX.png").Output()
 		if e != nil {
@@ -100,6 +93,15 @@ func main() {
 			os.Exit(3)
 		}
 	}
+
+	// Catch interrupts
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for range sig {
+			helpexit("", false, console)
+		}
+	}()
 
 	rest := flag.Args()
 	if len(rest) > 1 {
@@ -161,6 +163,7 @@ func main() {
 			helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console)
 		}
 
+		// Alert
 		now := time.Now()
 		fmt.Printf("%s  %s  %s %f\n", now.Format("2006-01-02_15:04:05"), designator, curr, val)
 		if val < min || val > max {
@@ -177,6 +180,6 @@ func main() {
 				alert.Start()
 			}
 		}
-		time.Sleep(time.Duration((intv * 1000 + rand.Intn(mrand * 1000))) * time.Millisecond)
+		time.Sleep(time.Duration(intv + rand.Intn(mrand)) * time.Second)
 	}
 }
