@@ -13,13 +13,14 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
 
-const version = "0.6.1"
+const version = "0.7.0"
 const stock = "NVDA:NASDAQ"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -32,7 +33,7 @@ Usage:  stock [OPTIONS] DESIGNATOR
     -t <Price>    Top price monitored in USD (optional)
     -i <Seconds>  Check interval (plus random add) [default: %d]
     -r <Seconds>  Max.random add to check interval [default: %d]
-    -c            Console-only: no GUI notifications (notify-send)
+    -c            Console-only: no GUI notifications
     -h            Show this help text (exclusive)
   DESIGNATOR:  STOCK:EXCH (stock) or CUR-CUR (exch.rate) [default: %s]
 `, baseintv, randintv, stock)
@@ -45,9 +46,16 @@ func helpexit(mess string, help bool, console bool) {
 		fmt.Printf("%s", usage)
 	}
 	if !console {
-		errorAlert := exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath,
-			fmt.Sprintf("ERROR alert '%s'", os.Args[0]),
-			fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
+		var errorAlert *exec.Cmd
+		if runtime.GOOS == "darwin" {
+			errorAlert = exec.Command("terminal-notifier", "-group", "stock", "-appIcon", iconpath,
+				"-title", fmt.Sprintf("ERROR alert '%s'", os.Args[0]), "-sound", "default",
+				"-message", fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
+		} else {
+			errorAlert = exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath,
+				fmt.Sprintf("ERROR alert '%s'", os.Args[0]),
+				fmt.Sprintf("'%s' has exited, restart to continue monitoring!", os.Args[0]))
+		}
 		errorAlert.Start()
 		time.Sleep(time.Duration(time.Second))
 		os.Remove(iconpath)
@@ -176,7 +184,13 @@ func main() {
 					msg = fmt.Sprintf("Price over Top (%.2f)", max)
 				}
 				message := fmt.Sprintf("%s\n%s is now %s %.2f\n", msg, designator, curr, val)
-				alert := exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath, title, message)
+				var alert *exec.Cmd
+				if runtime.GOOS == "darwin" {
+					alert = exec.Command("terminal-notifier", "-group", "stock", "-appIcon", iconpath,
+				"-title", title, "-message", message, "-sound", "default")
+				} else {
+					alert = exec.Command("notify-send", "-w", "-t", "600000", "-i", iconpath, title, message)
+				}
 				alert.Start()
 			}
 		}

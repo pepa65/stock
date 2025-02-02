@@ -3,16 +3,17 @@
 [![GitHub](https://img.shields.io/github/license/pepa65/stock.svg)](LICENSE)
 [![run-ci](https://github.com/pepa65/stock/actions/workflows/ci.yml/badge.svg)](https://github.com/pepa65/stock/actions/workflows/ci.yml) 
 
-# stock v0.6.1
+# stock v0.7.0
 **Monitor stock or exchange rate by scraping Google Finance**
 
-Follows a single stock on a specified exchange or a currency exchange rate.
-Optionally monitors a bottom & top price and then alerts
-(on Linux with notify-send) when the price goes outside of the range.
-The Google Finance page for the stock or the exchange rate is scraped.
-
+* The Google Finance page for the stock or the exchange rate is scraped.
+* Follows a single stock on a specified exchange or a (crypto) currency exchange rate.
+* Optionally monitors a bottom and/or a top price and then alerts when the price goes outside of the range.
+* The alerts can be terminal only, or use a GUI on Linux, BSD and MacOS.
 * Repo: <https://github.com/pepa65/stock>
-* Requires: libnotify-bin(notify-send)[for alerts]
+* Required:
+  - libnotify-bin(notify-send) [for GUI alerts on Linux/BSD]
+  - terminal-notifier [for GUI alerts on MacOS]
 
 ## Install
 ### Download
@@ -32,10 +33,12 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o stock
 sudo cp stock /usr/local/bin/
 sudo chown root:root /usr/local/bin/stock
 ```
+(Or `GOOS` can be `darwin` for MacOS, or
+`dragonfly`, `freebsd`, `netbsd` or `openbsd` for BSD.)
 
 ## Usage
 ```
-stock v0.6.1 - Monitor stock or exchange rate by scraping Google Finance
+stock v0.7.0 - Monitor stock or exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
     -b <Price>    Bottom price monitored in USD (optional)
