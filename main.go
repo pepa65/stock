@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"math/rand"
@@ -20,21 +21,24 @@ import (
 	"time"
 )
 
-const version = "0.7.0"
-const stock = "NVDA:NASDAQ"
+const version = "0.8.0"
+const stock = "USD-EUR"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
+const tries = 5
 
 var usage = "stock v" + version +
 	fmt.Sprintf(` - Monitor stock or exchange rate by scraping Google Finance
 Usage:  stock [OPTIONS] DESIGNATOR
   OPTIONS:
-    -b <Price>    Bottom price monitored in USD (optional)
-    -t <Price>    Top price monitored in USD (optional)
-    -i <Seconds>  Check interval (plus random add) [default: %d]
-    -r <Seconds>  Max.random add to check interval [default: %d]
-    -c            Console-only: no GUI notifications
-    -h            Show this help text (exclusive)
+    -b <Price/Rate>  Bottom price or rate monitored (optional)
+    -t <Price/Rate>  Top price or rate monitored (optional)
+    -i <Seconds>     Check interval base (random offset added) [default: %d]
+    -r <Seconds>     Max.random offset added to check interval [default: %d]
+    -e               Operate in EUR instead of USD (ignored for exchange rates)
+    -x               Give exit notifications on GUI (notify-send)
+    -c               Console-only: no GUI notifications
+    -h               Show this help text (exclusive)
   DESIGNATOR:  STOCK:EXCH (stock) or CUR-CUR (exch.rate) [default: %s]
 `, baseintv, randintv, stock)
 //go:embed stock.png
@@ -45,6 +49,7 @@ func helpexit(mess string, help bool, console bool) {
 	if help {
 		fmt.Printf("%s", usage)
 	}
+
 	if !console {
 		var errorAlert *exec.Cmd
 		if runtime.GOOS == "darwin" {
@@ -60,6 +65,7 @@ func helpexit(mess string, help bool, console bool) {
 		time.Sleep(time.Duration(time.Second))
 		os.Remove(iconpath)
 	}
+
 	if len(mess) > 0 {
 		fmt.Printf("\nERROR: %s\n", mess)
 		os.Exit(1)
@@ -67,21 +73,68 @@ func helpexit(mess string, help bool, console bool) {
 	os.Exit(0)
 }
 
+func fetchval(designator string, console bool, exit bool) float64 {
+	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
+	// Fetch page at url
+	n := tries
+	res, err := http.Get(url)
+	for n > 0 && err != nil {
+		res, err = http.Get(url)
+		n--
+	}
+	if n == 0 {
+		helpexit("failure to read URL", false, console || !exit)
+	}
+
+	// Parse page
+	defer res.Body.Close()
+	data, _ := ioutil.ReadAll(res.Body)
+	if len(data) == 0 {
+		helpexit(fmt.Sprintf("invalid designator %s", designator), true, console || !exit)
+	}
+
+	// data-last-price="PRICE"
+	start := strings.Split(string(data), `data-last-price="`)
+	if len(start) < 2 {
+		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
+	}
+
+	price := strings.Split(start[1], `"`)
+	if len(price) < 2 {
+		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
+	}
+
+	val, err := strconv.ParseFloat(price[0], 64)
+	if err != nil {
+		helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console || !exit)
+	}
+	return val
+}
+
 func main() {
 	var min float64
 	var max float64
 	var intv int
 	var mrand int
+	var euro bool
+	var exit bool
 	var console bool
 	var help bool
 	designator := stock
-	flag.Float64Var(&min, "b", 0, "Bottom price monitored")
-	flag.Float64Var(&max, "t", math.MaxFloat64, "Top price monitored")
-	flag.IntVar(&intv, "i", baseintv, "Check interval in seconds (plus random add)")
-	flag.IntVar(&mrand, "r", randintv, "Max.random add to check interval in seconds")
-	flag.BoolVar(&console, "c", false, "Console-only: no GUI notifications")
-	flag.BoolVar(&help, "h", false, "Show help text")
-	flag.Parse()
+	fs := flag.NewFlagSet("stock", flag.ContinueOnError)
+	fs.Float64Var(&min, "b", 0, "Bottom price monitored")
+	fs.Float64Var(&max, "t", math.MaxFloat64, "Top price monitored")
+	fs.IntVar(&intv, "i", baseintv, "Check interval in seconds (plus random add)")
+	fs.IntVar(&mrand, "r", randintv, "Max.random add to check interval in seconds")
+	fs.BoolVar(&euro, "e", false, "Operate in EUR instead of USD")
+	fs.BoolVar(&exit, "x", false, "Give exit notifications on GUI")
+	fs.BoolVar(&console, "c", false, "Console-only: no GUI notifications")
+	fs.BoolVar(&help, "h", false, "Show help text")
+	fs.SetOutput(io.Discard)
+	e := fs.Parse(os.Args[1:])
+	if e != nil {
+		helpexit(fmt.Sprint(e), true, true)
+	}
 	if help {
 		helpexit("", true, true)
 	}
@@ -107,18 +160,18 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		for range sig {
-			helpexit("", false, console)
+			helpexit("", false, console || !exit)
 		}
 	}()
 
-	rest := flag.Args()
+	rest := fs.Args()
 	if len(rest) > 1 {
 		for _, r := range rest {
 			if r[0] == '-' {
-				helpexit("all flags (start with '-') should come before the designator", true, console)
+				helpexit("all flags (start with '-') should come before the designator", true, console || !exit)
 			}
 		}
-		helpexit(fmt.Sprintf("only 1 designator allowed: %s", rest), true, console)
+		helpexit(fmt.Sprintf("only 1 designator allowed: %s", rest), true, console || !exit)
 	}
 
 	if len(rest) == 1 {
@@ -132,48 +185,36 @@ func main() {
 	} else if len(currs) == 1 {
 		currs = strings.Split(designator, ":")
 		if len(currs) != 2 {
-			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", true, console)
+			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", true, console || !exit)
 		}
 	}
 
 	if min > max {
-		helpexit(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max), true, console)
+		helpexit(fmt.Sprintf("Bottom price (%f) is bigger than Top price (%f)", min, max), true, console || !exit)
 	}
 
+	minf, maxf, minmax := "", "", ""
+	if min > 0 {
+		minf = strconv.FormatFloat(min, 'f', 2, 64)
+	}
+	if max < math.MaxFloat64 {
+		maxf = strconv.FormatFloat(max, 'f', 2, 64)
+	}
+	if len(minf) + len(maxf) > 0 {
+		minmax = fmt.Sprintf(" [%v...%v]", minf, maxf)
+	}
 	designator = strings.ToUpper(designator)
-	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
-
-	for {
-		res, err := http.Get(url)
-		if err != nil {
-			helpexit("failure to read URL", false, console)
+	rate := float64(1)
+	for { // Loop until exit
+		if euro {
+			rate = fetchval("USD-EUR", console, exit)
+			curr = "EUR"
 		}
-
-		defer res.Body.Close()
-		data, _ := ioutil.ReadAll(res.Body)
-		if len(data) == 0 {
-			helpexit(fmt.Sprintf("invalid designator %s", designator), true, console)
-		}
-
-		// data-last-price="PRICE"
-		start := strings.Split(string(data), `data-last-price="`)
-		if len(start) < 2 {
-			helpexit(fmt.Sprintf("designator %s not found", designator), true, console)
-		}
-
-		price := strings.Split(start[1], `"`)
-		if len(price) < 2 {
-			helpexit(fmt.Sprintf("designator %s not found", designator), true, console)
-		}
-
-		val, err := strconv.ParseFloat(price[0], 64)
-		if err != nil {
-			helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console)
-		}
+		val := fetchval(designator, console, exit) * rate
 
 		// Alert
 		now := time.Now()
-		fmt.Printf("%s  %s  %s %f\n", now.Format("2006-01-02_15:04:05"), designator, curr, val)
+		fmt.Printf("%s  %s  %s %f%v\n", now.Format("2006-01-02_15:04:05"), designator, curr, val, minmax)
 		if val < min || val > max {
 			if !console {
 				title := fmt.Sprintf("Price alert '%s'", os.Args[0])
