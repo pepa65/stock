@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const version = "0.8.0"
+const version = "0.8.1"
 const stock = "USD-EUR"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -178,7 +178,7 @@ func main() {
 		designator = rest[0]
 	}
 
-	curr := "USD"
+	curr, stock := "USD", false
 	currs := strings.Split(designator, "-")
 	if len(currs) == 2 {
 		curr = currs[1]
@@ -187,6 +187,7 @@ func main() {
 		if len(currs) != 2 {
 			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", true, console || !exit)
 		}
+		stock = true
 	}
 
 	if min > max {
@@ -206,8 +207,8 @@ func main() {
 	designator = strings.ToUpper(designator)
 	rate := float64(1)
 	for { // Loop until exit
-		if euro {
-			rate = fetchval("USD-EUR", console, exit)
+		if euro && stock {
+			rate = fetchval("USD-EUR", true, false)
 			curr = "EUR"
 		}
 		val := fetchval(designator, console, exit) * rate
