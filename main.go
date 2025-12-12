@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const version = "0.9.0"
+const version = "0.9.2"
 const stock = "USD-EUR"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -83,6 +83,9 @@ func fetchval(designator string, console bool, exit bool) float64 {
 		n--
 	}
 	if n == 0 {
+		if designator == "USD-EUR" {
+			return 0
+		}
 		helpexit("failure to read URL", false, console || !exit)
 	}
 
@@ -90,22 +93,34 @@ func fetchval(designator string, console bool, exit bool) float64 {
 	defer res.Body.Close()
 	data, _ := ioutil.ReadAll(res.Body)
 	if len(data) == 0 {
+		if designator == "USD-EUR" {
+			return 0
+		}
 		helpexit(fmt.Sprintf("invalid designator %s", designator), true, console || !exit)
 	}
 
 	// data-last-price="PRICE"
 	start := strings.Split(string(data), `data-last-price="`)
 	if len(start) < 2 {
+		if designator == "USD-EUR" {
+			return 0
+		}
 		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
 	}
 
 	price := strings.Split(start[1], `"`)
 	if len(price) < 2 {
+		if designator == "USD-EUR" {
+			return 0
+		}
 		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
 	}
 
 	val, err := strconv.ParseFloat(price[0], 64)
 	if err != nil {
+		if designator == "USD-EUR" {
+			return 0
+		}
 		helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console || !exit)
 	}
 	return val
@@ -208,8 +223,11 @@ func main() {
 	rate := float64(1)
 	for { // Loop until exit
 		if euro && stock {
-			rate = fetchval("USD-EUR", true, false)
-			curr = "EUR"
+			newrate := fetchval("USD-EUR", true, false)
+			if newrate > 0 { // When not found, don't change the rate
+				rate = newrate
+			}
+			curr = "(" + strconv.FormatFloat(1/rate, 'f', 2, 64) + ")EUR"
 		}
 		val := fetchval(designator, console, exit) * rate
 
