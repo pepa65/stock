@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const version = "0.9.2"
+const version = "0.10.0"
 const stock = "USD-EUR"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -44,6 +44,7 @@ Usage:  stock [OPTIONS] DESIGNATOR
 //go:embed stock.png
 var icon []byte
 var iconpath string
+var currmode bool
 
 func helpexit(mess string, help bool, console bool) {
 	if help {
@@ -83,7 +84,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 		n--
 	}
 	if n == 0 {
-		if designator == "USD-EUR" {
+		if designator == "USD-EUR" && !currmode {
 			return 0
 		}
 		helpexit("failure to read URL", false, console || !exit)
@@ -93,7 +94,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 	defer res.Body.Close()
 	data, _ := ioutil.ReadAll(res.Body)
 	if len(data) == 0 {
-		if designator == "USD-EUR" {
+		if designator == "USD-EUR" && !currmode {
 			return 0
 		}
 		helpexit(fmt.Sprintf("invalid designator %s", designator), true, console || !exit)
@@ -102,7 +103,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 	// data-last-price="PRICE"
 	start := strings.Split(string(data), `data-last-price="`)
 	if len(start) < 2 {
-		if designator == "USD-EUR" {
+		if designator == "USD-EUR" && !currmode {
 			return 0
 		}
 		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
@@ -110,7 +111,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 
 	price := strings.Split(start[1], `"`)
 	if len(price) < 2 {
-		if designator == "USD-EUR" {
+		if designator == "USD-EUR" && !currmode {
 			return 0
 		}
 		helpexit(fmt.Sprintf("designator %s not found", designator), true, console || !exit)
@@ -118,7 +119,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 
 	val, err := strconv.ParseFloat(price[0], 64)
 	if err != nil {
-		if designator == "USD-EUR" {
+		if designator == "USD-EUR" && !currmode {
 			return 0
 		}
 		helpexit(fmt.Sprintf("cannot convert %s to float", price), false, console || !exit)
@@ -127,6 +128,7 @@ func fetchval(designator string, console bool, exit bool) float64 {
 }
 
 func main() {
+	currmode = true
 	var min float64
 	var max float64
 	var intv int
@@ -193,7 +195,7 @@ func main() {
 		designator = rest[0]
 	}
 
-	curr, stock := "USD", false
+	curr := "USD"
 	currs := strings.Split(designator, "-")
 	if len(currs) == 2 {
 		curr = currs[1]
@@ -202,7 +204,7 @@ func main() {
 		if len(currs) != 2 {
 			helpexit("give designator as STOCK:EXCHANGE or as CUR-CUR", true, console || !exit)
 		}
-		stock = true
+		currmode = false
 	}
 
 	if min > max {
@@ -222,7 +224,7 @@ func main() {
 	designator = strings.ToUpper(designator)
 	rate := float64(1)
 	for { // Loop until exit
-		if euro && stock {
+		if euro && !currmode {
 			newrate := fetchval("USD-EUR", true, false)
 			if newrate > 0 { // When not found, don't change the rate
 				rate = newrate
