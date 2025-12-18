@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const version = "0.10.0"
+const version = "0.11.0"
 const stock = "USD-EUR"
 const baseintv = 300 // seconds
 const randintv = 60 // seconds
@@ -77,10 +77,15 @@ func helpexit(mess string, help bool, console bool) {
 func fetchval(designator string, console bool, exit bool) float64 {
 	url := fmt.Sprintf("https://www.google.com/finance/quote/%s", designator)
 	// Fetch page at url
-	n := tries
+	n, pause := tries, baseintv >> (tries+1)
+	if pause == 0 {
+		pause = 1
+	}
 	res, err := http.Get(url)
 	for n > 0 && err != nil {
 		res, err = http.Get(url)
+		time.Sleep(time.Duration(pause) * time.Second)
+		pause += pause
 		n--
 	}
 	if n == 0 {
